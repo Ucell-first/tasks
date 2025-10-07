@@ -1,0 +1,34 @@
+---
+version: "3"
+
+
+vars:
+  TOOLBOX_IMAGE: harbor-registry.local.iti.domain/library/toolbox:v40
+  DOCKER:
+    sh: which docker || echo ""
+  DOCKER_USER:
+    sh: echo "$(id -u):$(id -g)"
+  DOCKER_VOLUMES:
+    sh: echo "-v $(pwd):/src:cached -v $(pwd)/_build:/build:cached -v toolbox_home:/home/container:cached"
+  DOCKER_RUN_TOOLS: "{{ .DOCKER }} run -it --rm --user {{ .DOCKER_USER }} {{ .DOCKER_VOLUMES }} -w /src {{ .TOOLBOX_IMAGE }} /src/scripts/tools.sh"
+
+tasks:
+  default:
+    desc: Listing available tasks
+    cmd: task --list-all
+
+  lint:
+    desc: "Проверка проекта на наличие ошибок линтинга с помощью линтера из Toolbox"
+    cmds:
+      - "{{ .DOCKER_RUN_TOOLS }} lint"
+
+  lint-fix:
+    desc: Run linters and fix issues
+    cmd: golangci-lint run ./... --fix
+
+  test-ci:
+    desc: "Запуск всех тестов внутри CI/без Docker"
+    cmds:
+      - go test -p 1 $(go list ./...) -v -coverprofile coverage.out -covermode count
+      - go tool cover -func=coverage.out
+      - gocover-cobertura < coverage.out > coverage.xml

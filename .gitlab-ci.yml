@@ -1,0 +1,43 @@
+variables:
+  TOOLBOX_IMAGE: ${HARBOR_HOST}/library/toolbox:v40
+
+# Cache for Go's modules.
+.go-cache:
+  variables:
+    GOPATH: $CI_PROJECT_DIR/.go/path
+    GOCACHE: $CI_PROJECT_DIR/.go/cache
+  before_script:
+    - mkdir -p .go/path
+    - mkdir -p .go/cache
+  cache:
+    paths:
+      - .go
+
+stages:
+  - test
+
+lint:
+  stage: test
+  image: ${TOOLBOX_IMAGE}
+  extends: .go-cache
+  script:
+    - golangci-lint run ./...
+  tags:
+    - dev-mc2
+
+test:
+  image: ${TOOLBOX_IMAGE}
+  variables:
+    CGO_ENABLED: "0"
+  stage: test
+  tags:
+    - dev-mc2
+  script:
+    - mkdir /data
+    - task test-ci
+  coverage: '/\(statements\)(?:\s+)?(\d+(?:\.\d+)?%)/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml

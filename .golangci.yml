@@ -1,0 +1,93 @@
+version: "2"
+run:
+  go: 1.24.0
+linters:
+  default: all
+  disable:
+    - containedctx
+    - depguard
+    - exhaustruct
+    - funlen
+    - gochecknoglobals
+    - gocritic
+    - godot
+    - iface
+    - interfacebloat
+    - intrange
+    - ireturn
+    - mnd
+    - paralleltest
+    - recvcheck
+    - revive
+    - tagalign
+    - tagliatelle
+    - testpackage
+    - noinlineerr
+    - wsl
+  settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+    cyclop:
+      max-complexity: 25
+    forbidigo:
+      forbid:
+        - pattern: ^(fmt\.Print(|f|ln)|print|println)$
+        - pattern: ^time\.Now\(\)($|\.F|\.A|\.B|\.L|\.UTC\(\)\.I|,|\))(# Calls of time\.Now() without \.UTC() is prohibited\.)?
+    gocyclo:
+      min-complexity: 40
+    gomoddirectives:
+      replace-allow-list:
+        - github.com/mc2soft/framework
+        - gitlab.mc2.software/libraries/datetime
+        - gitlab.mc2.software/libraries/jwt
+        - gitlab.mc2.software/libraries/translations
+    govet:
+      enable-all: true
+    lll:
+      line-length: 120
+    wrapcheck:
+      ignore-sig-regexps:
+        - \.Write\(
+        - \.WriteString\(
+        - \.WriteJSON\(
+        - \.WriteHTML\(
+        - \.Redirect\(
+        - \.Error\(
+        - \.HandleAccessErrors\(
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - godox
+        text: TODO
+      - linters:
+          - gosec
+        text: G101
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      module-path: gitlab.local.iti.domain/mc2/microservices/payments
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
