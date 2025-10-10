@@ -31,6 +31,7 @@ type Tasker interface {
 	Create(ctx context.Context, taskName string, params map[string]string) error
 	CreateScheduled(ctx context.Context, taskName string, params map[string]string,
 		startAt time.Time, period time.Duration) error
+	CreateDelayed(ctx context.Context, host, taskName string, params map[string]string, startAt time.Time) error
 	Start() error
 	Stop()
 }
