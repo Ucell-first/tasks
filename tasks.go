@@ -42,9 +42,11 @@ type Tasks struct {
 	scheduledTasks     map[string]models.Task
 	taskQueue          chan models.Task
 	retryQueue         chan models.Task
+	delayedQueue       chan models.Task
 	opts               *options
 	wg                 sync.WaitGroup
 	wgRetry            sync.WaitGroup
+	wgDelayed          sync.WaitGroup
 	tasksHandlersMutex sync.RWMutex
 	scheduledTaskMutex sync.RWMutex
 	AreConsumersActive atomic.Bool
