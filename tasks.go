@@ -116,6 +116,7 @@ func (t *Tasks) initialize() error {
 	t.scheduledTasks = make(map[string]models.Task)
 	t.taskQueue = make(chan models.Task, t.opts.queueSize)
 	t.retryQueue = make(chan models.Task, t.opts.queueSize)
+	t.delayedQueue = make(chan models.Task, t.opts.queueSize)
 
 	return nil
 }
@@ -211,6 +212,51 @@ func (t *Tasks) CreateScheduled(
 	return nil
 }
 
+// CreateDelayed creates a delayed task that will be executed at the specified time.
+// host parameter is reserved for future use (e.g., for distributed task routing).
+func (t *Tasks) CreateDelayed(
+	ctx context.Context,
+	host, taskName string,
+	params map[string]string,
+	startAt time.Time,
+) error {
+	// Validate startAt time
+	if startAt.Before(time.Now().UTC()) {
+		return fmt.Errorf("%w: start time is in the past", ErrCreateDelayed)
+	}
+
+	task := models.Task{
+		Name:      taskName,
+		Params:    params,
+		StartTime: startAt,
+		Host:      host,
+	}
+
+	if task.Params == nil {
+		task.Params = map[string]string{}
+	}
+
+	// Mark as delayed task
+	task.Params["delayed"] = "true"
+
+	t.opts.logger.Logf(logger.LogLevelInfo,
+		"creating delayed task: %s, start time: %s",
+		nil,
+		taskName,
+		startAt.Format(time.RFC3339),
+	)
+
+	// Add to delayed queue
+	select {
+	case t.delayedQueue <- task:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("%w: %w", ErrCreateDelayed, ctx.Err())
+	default:
+		return fmt.Errorf("%w: delayed queue is full", ErrCreateDelayed)
+	}
+}
+
 // Stop stop all tasks processing.
 func (t *Tasks) Stop() {
 	// @TODO в будущем если в интерфейс provider будет добавлятся
@@ -220,12 +266,13 @@ func (t *Tasks) Stop() {
 	t.waitForTaskQueueFree(t.opts.ctx)
 
 	close(t.taskQueue)
-
 	t.wg.Wait()
 
 	close(t.retryQueue)
-
 	t.wgRetry.Wait()
+
+	close(t.delayedQueue)
+	t.wgDelayed.Wait()
 }
 
 func (t *Tasks) waitForTaskQueueFree(ctx context.Context) {
