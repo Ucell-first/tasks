@@ -290,6 +290,56 @@ func (ts *TasksSuite) TestTasks_CreateDelayed() {
 	tasker.Stop()
 }
 
+func (ts *TasksSuite) TestTasks_CreateDelayed_CancelContext() {
+	mockProvider := mocks.New()
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	tasker, err := New(
+		WithContext(ctx),
+		WithProvider(mockProvider, "test"),
+		WithRetryPolicy(models.RetryPolicy{
+			BackoffCoefficient: 2.0,
+			MaximumAttempts:    3,
+		}),
+		WithNumWorkers(1),
+		WithQueueSize(1),
+		WithLogger(logger.DefaultLogger{}),
+	)
+	ts.Require().NoError(err)
+
+	err = tasker.RegisterHandler("test", testTask)
+	ts.Require().NoError(err)
+
+	err = tasker.Start()
+	ts.Require().NoError(err)
+
+	// Fill the queue
+	err = tasker.CreateDelayed(
+		ctx,
+		"localhost",
+		"test",
+		map[string]string{"task_id": "task_1"},
+		time.Now().UTC().Add(1*time.Second),
+	)
+	ts.Require().NoError(err)
+
+	// Cancel context
+	cancel()
+
+	// Try to create another delayed task with canceled context
+	err = tasker.CreateDelayed(
+		ctx,
+		"localhost",
+		"test",
+		map[string]string{"task_id": "task_2"},
+		time.Now().UTC().Add(1*time.Second),
+	)
+	ts.Require().Error(err)
+
+	tasker.Stop()
+}
+
 func testTask(params map[string]string) error {
 	log.Println("task params", params)
 
