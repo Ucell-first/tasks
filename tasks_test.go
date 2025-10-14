@@ -340,6 +340,57 @@ func (ts *TasksSuite) TestTasks_CreateDelayed_CancelContext() {
 	tasker.Stop()
 }
 
+func (ts *TasksSuite) TestTasks_CreateDelayed_QueueFull() {
+	mockProvider := mocks.New()
+
+	tasker, err := New(
+		WithContext(context.Background()),
+		WithProvider(mockProvider, "test"),
+		WithRetryPolicy(models.RetryPolicy{
+			BackoffCoefficient: 2.0,
+			MaximumAttempts:    3,
+		}),
+		WithNumWorkers(1),
+		WithQueueSize(2), // Small queue size
+		WithLogger(logger.DefaultLogger{}),
+	)
+	ts.Require().NoError(err)
+
+	err = tasker.RegisterHandler("test", func(params map[string]string) error {
+		time.Sleep(5 * time.Second) // Slow handler
+		return nil
+	})
+	ts.Require().NoError(err)
+
+	err = tasker.Start()
+	ts.Require().NoError(err)
+
+	// Fill the queue
+	for i := 0; i < 2; i++ {
+		err = tasker.CreateDelayed(
+			context.Background(),
+			"localhost",
+			"test",
+			map[string]string{"task_id": fmt.Sprintf("task_%d", i)},
+			time.Now().UTC().Add(1*time.Second),
+		)
+		ts.Require().NoError(err)
+	}
+
+	// Try to add one more - should fail (queue full)
+	err = tasker.CreateDelayed(
+		context.Background(),
+		"localhost",
+		"test",
+		map[string]string{"task_id": "task_overflow"},
+		time.Now().UTC().Add(1*time.Second),
+	)
+	ts.Require().Error(err)
+	ts.Require().ErrorIs(err, ErrCreateDelayed)
+
+	tasker.Stop()
+}
+
 func testTask(params map[string]string) error {
 	log.Println("task params", params)
 
