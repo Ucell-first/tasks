@@ -394,13 +394,11 @@ func (ts *TasksSuite) TestTasks_CreateDelayed_QueueFull() {
 
 func testTask(params map[string]string) error {
 	log.Println("task params", params)
-
 	return nil
 }
 
 func testTaskWithError(params map[string]string) error {
 	log.Println("task params", params)
-
 	//nolint:err113
 	return errors.New("task error")
 }
