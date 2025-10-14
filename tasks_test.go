@@ -106,6 +106,7 @@ func (ts *TasksSuite) TestTasks_CreateScheduled() {
 	})
 
 	time.Sleep(defaultScheduledTaskDuration)
+	tasker.Stop()
 }
 
 func (ts *TasksSuite) TestTasks_CreateDelayed() {
