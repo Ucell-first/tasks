@@ -18,6 +18,7 @@ var (
 
 	ErrTaskNameNotRegistered = errors.New("task name not registered")
 	ErrCreateScheduled       = errors.New("CreateScheduled method")
+	ErrCreateDelayed         = errors.New("CreateDelayed method")
 
 	ErrEmptyTopic = errors.New("empty topic")
 
